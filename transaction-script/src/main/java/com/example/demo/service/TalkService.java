@@ -1,7 +1,10 @@
 package com.example.demo.service;
 
 import org.jdbi.v3.core.Jdbi;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
@@ -9,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TalkService {
     private final Jdbi jdbi;
+    private final TalkRejectedGateway talkRejectedGateway;
 
     public TalkSubmittedResult submitTalk(Long speakerId, String title) {
         var talkId = jdbi.inTransaction(handle -> {
@@ -44,5 +48,63 @@ public class TalkService {
                        .one();
         });
         return new TalkSubmittedResult(talkId);
+    }
+
+    public void acceptTalk(Long talkId) {
+        jdbi.useTransaction(handle -> {
+            var status =
+                handle.select("SELECT status FROM talk WHERE id = :id")
+                    .bind("id", talkId)
+                    .mapTo(String.class)
+                    .one();
+            if (!status.equals("SUBMITTED")) {
+                throw new CannotAcceptTalkException("Cannot accept a talk because its status is: " + status);
+            }
+            handle.createUpdate("UPDATE talk SET status = 'ACCEPT' WHERE id = :id")
+                .bind("id", talkId)
+                .execute();
+        });
+    }
+
+    public void rejectTalk(Long talkId) {
+        jdbi.useTransaction(handle -> {
+            var status =
+                handle.select("SELECT status FROM talk WHERE id = :id")
+                    .bind("id", talkId)
+                    .mapTo(String.class)
+                    .one();
+            if (!status.equals("SUBMITTED")) {
+                throw new CannotAcceptTalkException("Cannot accept a talk because its status is: " + status);
+            }
+            handle.createUpdate(
+                    """
+                        INSERT INTO outbox_talk_rejected (status, talkId)
+                        VALUES ('CREATED', :talkId)
+                        """
+                ).bind("talkId", talkId)
+                .execute();
+        });
+    }
+
+    @Scheduled(fixedDelay = 5000)
+    public void processOutbox() {
+        jdbi.useTransaction(handle -> {
+            var outboxRecords =
+                handle.select("""
+                        SELECT * FROM outbox_talk_rejected
+                        WHERE status = 'CREATED'
+                        FOR UPDATE SKIP LOCKED
+                        """)
+                    .mapToMap()
+                    .list();
+            for (Map<String, Object> outboxRecord : outboxRecords) {
+                talkRejectedGateway.notifyTalkRejection((Long) outboxRecord.get("talkId"));
+            }
+            handle.createUpdate(
+                    "UPDATE outbox_talk_rejected SET status = 'PROCESSED' WHERE id IN (:id)"
+                )
+                .bindList("id", outboxRecords.stream().map(m -> (Long) m.get("id")).toList())
+                .execute();
+        });
     }
 }
