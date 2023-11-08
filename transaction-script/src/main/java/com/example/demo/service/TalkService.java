@@ -68,6 +68,7 @@ public class TalkService {
 
     public void rejectTalk(Long talkId) {
         jdbi.useTransaction(handle -> {
+            // code fore checking status...
             var status =
                 handle.select("SELECT status FROM talk WHERE id = :id")
                     .bind("id", talkId)
@@ -76,6 +77,9 @@ public class TalkService {
             if (!status.equals("SUBMITTED")) {
                 throw new CannotAcceptTalkException("Cannot accept a talk because its status is: " + status);
             }
+            handle.createUpdate("UPDATE talk SET status = 'REJECTED' WHERE id = :id")
+                .bind("id", talkId)
+                .execute();
             handle.createUpdate(
                     """
                         INSERT INTO outbox_talk_rejected (status, talkId)
