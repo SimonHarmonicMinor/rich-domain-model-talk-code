@@ -21,7 +21,7 @@ import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORT
 @DataJpaTest
 @Transactional(propagation = NOT_SUPPORTED)
 @AutoConfigureTestDatabase(replace = NONE)
-@Import({JdbiConfig.class, TalkService.class})
+@Import({JdbiConfig.class, TalkService.class, TalkRejectedGateway.class})
 class TalkServiceTest {
     @Container
     @ServiceConnection
