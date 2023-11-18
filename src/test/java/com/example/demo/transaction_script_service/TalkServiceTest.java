@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.transaction_script_service;
 
 import com.example.demo.config.JdbiConfig;
 

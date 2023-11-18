@@ -1,5 +1,7 @@
-package com.example.demo.service;
+package com.example.demo.transaction_script_service;
 
+import com.example.demo.exception.CannotAcceptTalkException;
+import com.example.demo.exception.CannotSubmitTalkException;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
