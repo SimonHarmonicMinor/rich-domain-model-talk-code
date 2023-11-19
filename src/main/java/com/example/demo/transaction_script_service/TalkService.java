@@ -46,11 +46,12 @@ public class TalkService {
                 .one();
             return handle.createUpdate(
                     """
-                        INSERT INTO talk (speaker_id, status, title)
-                        VALUES (:id, 'SUBMITTED', :title)
+                        INSERT INTO talk (speaker_id, status, title, talkNumber)
+                        VALUES (:id, 'SUBMITTED', :title, :talkNumber)
                         """
                 ).bind("id", speakerId)
                        .bind("title", title)
+                       .bind("talkNumber", maxTalkNumber + 1)
                        .executeAndReturnGeneratedKeys("id")
                        .mapTo(Long.class)
                        .one();
