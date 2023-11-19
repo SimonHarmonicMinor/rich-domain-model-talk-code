@@ -38,6 +38,12 @@ public class TalkService {
             if (submittedTalksCount >= maxSubmittedTalksCount) {
                 throw new CannotSubmitTalkException("Submitted talks count is maximum: " + maxSubmittedTalksCount);
             }
+            Long maxTalkNumber =
+                handle.select(
+                    "SELECT MAX(talkNumber) FROM talk WHERE speaker_id = :id GROUP BY speaker_id")
+                .bind("id", speakerId)
+                .mapTo(Long.class)
+                .one();
             return handle.createUpdate(
                     """
                         INSERT INTO talk (speaker_id, status, title)
