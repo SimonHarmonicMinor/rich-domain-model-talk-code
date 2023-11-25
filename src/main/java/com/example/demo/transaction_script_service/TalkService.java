@@ -89,14 +89,8 @@ public class TalkService {
             handle.createUpdate("UPDATE talk SET status = 'REJECTED' WHERE id = :id")
                 .bind("id", talkId)
                 .execute();
-            handle.createUpdate(
-                    """
-                        INSERT INTO outbox_talk_rejected (status, talkId)
-                        VALUES ('CREATED', :talkId)
-                        """
-                ).bind("talkId", talkId)
-                .execute();
         });
+        talkRejectedGateway.notifyTalkRejection(talkId);
     }
 
     @Scheduled(fixedDelay = 5000)
